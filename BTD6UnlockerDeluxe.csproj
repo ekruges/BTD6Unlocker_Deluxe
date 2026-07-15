@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>BTD6UnlockerDeluxe</AssemblyName>
+    <RootNamespace>UnlockerDeluxe</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <DebugType>embedded</DebugType>
+    <!-- Point this at your BTD6 install if it differs -->
+    <BloonsTD6 Condition="'$(BloonsTD6)' == ''">C:\Program Files (x86)\Steam\steamapps\common\BloonsTD6</BloonsTD6>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Icon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Btd6ModHelper">
+      <HintPath>$(BloonsTD6)\Mods\Btd6ModHelper.dll</HintPath>
+    </Reference>
+    <Reference Include="MelonLoader">
+      <HintPath>$(BloonsTD6)\MelonLoader\net6\MelonLoader.dll</HintPath>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(BloonsTD6)\MelonLoader\net6\0Harmony.dll</HintPath>
+    </Reference>
+    <Reference Include="Il2CppInterop.Runtime">
+      <HintPath>$(BloonsTD6)\MelonLoader\net6\Il2CppInterop.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="Il2CppInterop.Common">
+      <HintPath>$(BloonsTD6)\MelonLoader\net6\Il2CppInterop.Common.dll</HintPath>
+    </Reference>
+    <GameAssemblies Include="$(BloonsTD6)\MelonLoader\Il2CppAssemblies\*.dll" />
+    <Reference Include="@(GameAssemblies)" />
+  </ItemGroup>
+
+  <Target Name="CopyToMods" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(BloonsTD6)\Mods" ContinueOnError="true" />
+  </Target>
+
+</Project>
