@@ -4,6 +4,10 @@
 
 All-in-one account unlocker and profile editor for Bloons TD 6, with a full in-game menu. A heavily extended fork of [btd6-unlocker](https://github.com/Interesting-exe/btd6-unlocker) by Interesting.
 
+## Bug, question or feature request? [Open an issue](https://github.com/ekruges/BTD6Unlocker_Deluxe/issues/new)
+
+Issues are open to anyone with a GitHub account. That's the fastest way to reach me.
+
 This mod depends on [BTD-Mod-Helper](https://github.com/gurrenm3/BTD-Mod-Helper). <br />
 Make sure you follow the [install guide](https://github.com/gurrenm3/BTD-Mod-Helper/wiki/Install-Guide) when installing mod helper.
 
@@ -12,7 +16,7 @@ Everything is available from the mod's settings page: **Mods → BTD6 Unlocker D
 # Features
 
 ### UNLOCK EVERYTHING
-One button that runs every unlock below, plus monkey money, trophies, realistic medals and all achievements.
+One button that runs every unlock below, plus monkey money, trophies, realistic medals and all achievements. Asks for confirmation before it runs.
 
 ### Unlocks
 - **Unlock Pop-Gated & Locked Towers** - unlocks every tower and hero through the game's own unlock path, maxes the pop-progress meters, flips Ninja Kiwi's internal debug unlock switches and flags all game modes unlocked. Covers the towers locked behind pop milestones.
@@ -23,8 +27,10 @@ One button that runs every unlock below, plus monkey money, trophies, realistic 
 - **Claim All Achievements** - marks every achievement complete and claims it through the game's own achievement manager, so the reward loot (monkey money, insta monkeys, powers) actually lands on your profile - same as pressing Claim on each one by hand.
 - **Max Player Level (155)** - sets rank and XP directly, with no level-up screens to click through.
 - **+100 Veteran Levels** - prestige levels, added directly.
-- **Bot Realistic Map Medals** - resets map records, then completes a believable spread: nearly all Easy Standards tapering down to a handful of CHIMPS, scaled by map difficulty, with mixed black/normal borders and sparse co-op. Deterministic, so re-running gives the same result.
-- **Max All Map Medals (100%)** - the loud version: every mode on every map, black-border quality, single player and co-op.
+- **Bot Realistic Map Medals** - adds a believable spread: nearly all Easy Standards tapering down to a handful of CHIMPS, scaled by map difficulty, with mixed black/normal borders and sparse co-op. **Additive only** - modes you already have a medal on are skipped, so your real medals and black borders are never overwritten. Deterministic, so re-running gives the same result.
+- **Max All Map Medals (100%)** - the loud version: every mode on every map, black-border quality, single player and co-op. Only upgrades modes that aren't black-bordered yet.
+
+Every action that writes map medals (both medal buttons, F9 and UNLOCK EVERYTHING) shows a confirmation dialog first.
 
 ### Currency
 Editable amounts with one-click buttons for **monkey money**, **trophies** and **tower XP**.
@@ -50,7 +56,8 @@ The last five actions are shown with timestamps at the bottom of the settings pa
 | F5 | Unlock all trophy store items |
 | F6 | Max player level, then +100 veteran levels per press |
 | F7 | Apply the veteran stat preset |
-| F8 | Unlock all towers + bot realistic medals |
+| F8 | Unlock pop-gated & locked towers (same as the menu button) |
+| F9 | Bot realistic map medals - asks first, never touches medals you already have |
 
 # Installing
 

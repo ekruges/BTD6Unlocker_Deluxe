@@ -35,7 +35,8 @@
     <Reference Include="@(GameAssemblies)" />
   </ItemGroup>
 
-  <Target Name="CopyToMods" AfterTargets="Build">
+  <!-- Pass -p:CopyToMods=false to build without installing into the game -->
+  <Target Name="CopyToMods" AfterTargets="Build" Condition="'$(CopyToMods)' != 'false'">
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(BloonsTD6)\Mods" ContinueOnError="true" />
   </Target>
 

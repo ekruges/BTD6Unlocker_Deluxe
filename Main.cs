@@ -10,20 +10,23 @@ using Il2CppAssets.Scripts.Data;
 using Il2CppAssets.Scripts.Data.TrophyStore;
 using Il2CppAssets.Scripts.Models;
 using Il2CppAssets.Scripts.Models.Knowledge;
+using Il2CppAssets.Scripts.Models.Profile;
 using Il2CppAssets.Scripts.Unity;
 using Il2CppAssets.Scripts.Unity.Player;
+using Il2CppAssets.Scripts.Unity.UI_New.InGame;
+using Il2CppAssets.Scripts.Unity.UI_New.Popups;
 using Il2CppAssets.Scripts.Utils;
 using MelonLoader;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(UnlockerDeluxe.Main), "BTD6 Unlocker Deluxe", "4.0.0", "ekruges")]
+[assembly: MelonInfo(typeof(UnlockerDeluxe.Main), "BTD6 Unlocker Deluxe", "4.1.0", "ekruges")]
 [assembly: MelonGame("Ninja Kiwi", "BloonsTD6")]
 
 namespace UnlockerDeluxe
 {
     public static class ModHelperData
     {
-        public const string Version = "3.6.1";
+        public const string Version = "4.1.0";
         public const string Name = "BTD6 Unlocker Deluxe";
         public const string RepoOwner = "ekruges";
         public const string RepoName = "BTD6Unlocker_Deluxe";
@@ -37,7 +40,8 @@ namespace UnlockerDeluxe
             "(pops, cash, games, rounds, trophies...), apply, or use the believable veteran preset. " +
             "Console at the bottom shows what every action did.\n\n" +
             "Hotkeys: F1 instas | F2 knowledge | F3 money+upgrades | F4 trophies | F5 trophy store | " +
-            "F6 max level / +100 veteran | F7 veteran stat preset | F8 unlock towers + realistic medals.\n\n" +
+            "F6 max level / +100 veteran | F7 veteran stat preset | F8 unlock pop-gated & locked towers | " +
+            "F9 bot realistic map medals (asks first, never touches medals you already have).\n\n" +
             "Changes write to your Ninja Kiwi profile and cannot be undone by removing the mod. Use on an alt if you care about flags.";
     }
 
@@ -118,14 +122,50 @@ namespace UnlockerDeluxe
             return p;
         }
 
+        // Anything that writes map medals asks first: a stray key press must never be the reason
+        // someone's medal collection changed. Non-dismissable, so the only exits are the two buttons.
+        private static bool confirmOpen;
+
+        private static void Confirm(string title, string body, string okText, Action onConfirm)
+        {
+            PopupScreen screen = PopupScreen.instance;
+            if (confirmOpen && screen != null && screen.IsPopupActiveOrLoading()) return;
+            if (screen == null)
+            {
+                Log($"{title} needs a confirmation dialog, which can't open right now - nothing was changed.");
+                return;
+            }
+            confirmOpen = true;
+            var placement = InGame.instance != null ? PopupScreen.Placement.inGameCenter : PopupScreen.Placement.menuCenter;
+            try
+            {
+                screen.ShowPopup(placement, title, body,
+                    new Action(() => { confirmOpen = false; onConfirm(); }), okText,
+                    new Action(() => { confirmOpen = false; Log($"{title} cancelled - nothing was changed."); }), "Cancel",
+                    Popup.TransitionAnim.Scale, PopupScreen.BackGround.GreyNonDismissable);
+            }
+            catch (Exception e)
+            {
+                confirmOpen = false;
+                Log($"{title}: the confirmation dialog failed ({e.Message}) - nothing was changed.");
+            }
+        }
+
+        private const string MedalPromiseText =
+            "Medals you already have are never touched - this only fills in modes you haven't completed. " +
+            "It writes to your Ninja Kiwi profile and can't be undone by removing the mod.";
+
         // ============================== UNLOCKS ==============================
 
         public static readonly ModSettingCategory CatUnlocks = new ModSettingCategory("Unlocks") { order = 1 };
 
-        public static readonly ModSettingButton BtnEverything = new ModSettingButton(() => UnlockEverything())
+        public static readonly ModSettingButton BtnEverything = new ModSettingButton(() => Confirm(
+            "Unlock everything?",
+            "Runs every unlock, adds monkey money and trophies, claims all achievements and bots realistic map medals. " + MedalPromiseText,
+            "Unlock", UnlockEverything))
         {
             displayName = "UNLOCK EVERYTHING",
-            description = "Runs every unlock below plus monkey money and trophies. One click, done.",
+            description = "Runs every unlock below plus monkey money, trophies, achievements and realistic map medals. Asks before running; medals you already have are never touched.",
             buttonText = "GO",
             category = CatUnlocks,
         };
@@ -180,7 +220,7 @@ namespace UnlockerDeluxe
 
         public static readonly ModSettingButton BtnLockedTowers = new ModSettingButton(() => UnlockAllTowers())
         {
-            displayName = "Unlock Pop-Gated & Locked Towers",
+            displayName = "Unlock Pop-Gated & Locked Towers (F8)",
             description = "Adds every tower and hero to your profile's unlocked sets and maxes the pops-progress meters - covers the towers locked behind pop milestones.",
             buttonText = "Unlock",
             category = CatUnlocks,
@@ -194,18 +234,25 @@ namespace UnlockerDeluxe
             category = CatUnlocks,
         };
 
-        public static readonly ModSettingButton BtnMedals = new ModSettingButton(() => BotRealisticMedals())
+        public static readonly ModSettingButton BtnMedals = new ModSettingButton(() => Confirm(
+            "Bot realistic map medals?",
+            "Adds a believable spread of medals: nearly all Easy Standards, tapering down to a handful of CHIMPS. " + MedalPromiseText,
+            "Add Medals", BotRealisticMedals))
         {
-            displayName = "Bot Realistic Map Medals",
-            description = "Resets map records, then completes a believable spread: nearly all Easy Standards, tapering down to a handful of CHIMPS, scaled by map difficulty, with mixed borders and sparse co-op. Deterministic - re-running gives the same spread.",
+            displayName = "Bot Realistic Map Medals (F9)",
+            description = "Adds a believable spread: nearly all Easy Standards, tapering down to a handful of CHIMPS, scaled by map difficulty, with mixed borders and sparse co-op. Only fills modes you don't have a medal on yet - existing medals and black borders are never touched. Asks first.",
             buttonText = "Bot",
             category = CatUnlocks,
         };
 
-        public static readonly ModSettingButton BtnMedalsMax = new ModSettingButton(() => BotAllMedals())
+        public static readonly ModSettingButton BtnMedalsMax = new ModSettingButton(() => Confirm(
+            "Max all map medals?",
+            "Black-borders every mode on every map, single player and co-op. Existing black borders are left as they are. " +
+            "It writes to your Ninja Kiwi profile and can't be undone by removing the mod.",
+            "Max Medals", BotAllMedals))
         {
             displayName = "Max All Map Medals (100%)",
-            description = "The loud version: every mode on every map, black-border quality, SP and co-op. All medal counts equal the map count.",
+            description = "The loud version: every mode on every map, black-border quality, SP and co-op. Only upgrades modes that aren't black-bordered yet. Asks first.",
             buttonText = "Max",
             category = CatUnlocks,
         };
@@ -498,15 +545,24 @@ namespace UnlockerDeluxe
             }
         }
 
+        // True when the player already has a medal on this mode (blackBorder: specifically a black
+        // border). When the check itself fails we report "owned", so an unreadable record is skipped
+        // rather than written over.
+        private static bool HasMedal(MapInfoManager mapInfo, string map, string difficulty, string mode, bool coop, bool blackBorder)
+        {
+            try { return mapInfo.HasCompletedMode(map, difficulty, mode, coop, blackBorder); }
+            catch { return true; }
+        }
+
+        // Additive only: modes that already have a medal are never passed to CompleteMode, so real
+        // completions and their black borders survive. (Before 4.1 this cleared every map record first.)
         private static void BotRealisticMedals()
         {
             Btd6Player player = P();
             if (player == null) return;
 
             var mapInfo = player.Data.mapInfo;
-            try { mapInfo.maps.Clear(); } catch { }
-
-            int sp = 0, coop = 0, chimps = 0, maps = 0;
+            int sp = 0, coop = 0, chimps = 0, kept = 0, maps = 0;
             foreach (var map in GameData.Instance.mapSet.Maps.items)
             {
                 if (map == null || map.isDebug) continue;
@@ -519,24 +575,34 @@ namespace UnlockerDeluxe
                     {
                         int chance = ModeChance[$"{diff.Key}/{mode}"] * factor / 100;
                         if (H($"{id}|{diff.Key}|{mode}|sp") >= chance) continue;
-                        bool noSave = H($"{id}|{diff.Key}|{mode}|ns") < (mode == "Clicks" ? 45 : 30);
-                        try
+
+                        if (HasMedal(mapInfo, id, diff.Key, mode, false, false)) kept++;
+                        else
                         {
-                            mapInfo.CompleteMode(id, diff.Key, mode, noSave, false);
-                            sp++;
-                            if (mode == "Clicks") chimps++;
+                            bool noSave = H($"{id}|{diff.Key}|{mode}|ns") < (mode == "Clicks" ? 45 : 30);
+                            try
+                            {
+                                mapInfo.CompleteMode(id, diff.Key, mode, noSave, false);
+                                sp++;
+                                if (mode == "Clicks") chimps++;
+                            }
+                            catch { }
                         }
-                        catch { }
+
                         if (H($"{id}|{diff.Key}|{mode}|coop") < 38)
                         {
-                            try { mapInfo.CompleteMode(id, diff.Key, mode, false, true); coop++; } catch { }
+                            if (HasMedal(mapInfo, id, diff.Key, mode, true, false)) kept++;
+                            else
+                            {
+                                try { mapInfo.CompleteMode(id, diff.Key, mode, false, true); coop++; } catch { }
+                            }
                         }
                     }
                 }
                 maps++;
             }
             player.SaveNow();
-            Log($"Realistic medals: {sp} SP completions ({chimps} CHIMPS) + {coop} coop across {maps} maps. Old map records were reset first.");
+            Log($"Realistic medals: added {sp} SP ({chimps} CHIMPS) + {coop} co-op across {maps} maps. {kept} medals you already had were left untouched.");
         }
 
         private static void BotAllMedals()
@@ -545,7 +611,7 @@ namespace UnlockerDeluxe
             if (player == null) return;
 
             var mapInfo = player.Data.mapInfo;
-            int maps = 0, completions = 0;
+            int maps = 0, added = 0, kept = 0;
             foreach (var map in GameData.Instance.mapSet.Maps.items)
             {
                 if (map == null || map.isDebug) continue;
@@ -555,14 +621,17 @@ namespace UnlockerDeluxe
                 {
                     foreach (string mode in diff.Value)
                     {
-                        try { mapInfo.CompleteMode(id, diff.Key, mode, true, false); completions++; } catch { }
-                        try { mapInfo.CompleteMode(id, diff.Key, mode, true, true); completions++; } catch { }
+                        foreach (bool coop in new[] { false, true })
+                        {
+                            if (HasMedal(mapInfo, id, diff.Key, mode, coop, true)) { kept++; continue; }
+                            try { mapInfo.CompleteMode(id, diff.Key, mode, true, coop); added++; } catch { }
+                        }
                     }
                 }
                 maps++;
             }
             player.SaveNow();
-            Log($"Medals: {maps} maps completed on every mode (SP+coop), {completions} completions, black-border quality.");
+            Log($"Medals: {added} modes black-bordered across {maps} maps (SP+co-op). {kept} were already black-bordered and left untouched.");
         }
 
         private static void UnlockAllUpgrades()
@@ -1054,7 +1123,7 @@ namespace UnlockerDeluxe
             WireStr(Console4, true);
             WireStr(Console5, true);
 
-            MelonLogger.Msg($"BTD6 Unlocker Deluxe v{ModHelperData.Version} loaded. Open Mods -> BTD6 Unlocker Deluxe for the menu. Hotkeys: F1 instas, F2 knowledge, F3 money+upgrades, F4 trophies, F5 trophy store, F6 max level/veteran, F7 veteran stat preset, F8 unlock towers + realistic medals.");
+            MelonLogger.Msg($"BTD6 Unlocker Deluxe v{ModHelperData.Version} loaded. Open Mods -> BTD6 Unlocker Deluxe for the menu. Hotkeys: F1 instas, F2 knowledge, F3 money+upgrades, F4 trophies, F5 trophy store, F6 max level/veteran, F7 veteran stat preset, F8 unlock pop-gated & locked towers, F9 bot realistic map medals (asks first).");
         }
 
         public override void OnUpdate()
@@ -1072,7 +1141,11 @@ namespace UnlockerDeluxe
                 else AddVeteranLevels(100);
             }
             if (Input.GetKeyDown(KeyCode.F7)) { VeteranPreset(); ApplyStats(); }
-            if (Input.GetKeyDown(KeyCode.F8)) { UnlockAllTowers(); BotRealisticMedals(); }
+            if (Input.GetKeyDown(KeyCode.F8)) UnlockAllTowers();
+            if (Input.GetKeyDown(KeyCode.F9))
+                Confirm("Bot realistic map medals?",
+                    "Adds a believable spread of medals: nearly all Easy Standards, tapering down to a handful of CHIMPS. " + MedalPromiseText,
+                    "Add Medals", BotRealisticMedals);
         }
     }
 }
